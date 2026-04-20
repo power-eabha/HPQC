@@ -210,3 +210,58 @@ Each version was first tested with small input values of known output to confirm
 #### Conclusion
 
 For these small test cases, the differences in runtime were extremely small. However, the collective communication methods worked correctly and showed the expected differences in communication strategy. In particular, scattering only the required chunk of the array should scale better than broadcasting the full vector to every process.
+
+### Step 2: Send/Recv vs Gather vs Reduce
+
+Three methods were compared for collecting partial sums at the root process:
+
+- **Send/Recv**: client processes sent their partial sums manually using `MPI_Send()`, and the root received them using a loop of `MPI_Recv()` calls.
+- **Gather**: each process sent its partial sum to the root using `MPI_Gather()`, and the root then summed the collected values.
+- **Reduce**: the partial sums were combined directly using `MPI_Reduce()` with `MPI_SUM`.
+
+Each version was tested with a small known input to confirm correctness before comparing runtimes.
+
+#### Results
+
+| Method     | Input | Expected Sum | Output Sum | Internal Runtime (s) |
+|------------|------:|-------------:|-----------:|---------------------:|
+| Send/Recv  | 10    | 55           | 55         | 0.000027             |
+| Gather     | 10    | 55           | 55         | 0.000138             |
+| Reduce     | 10    | 55           | 55         | 0.000025             |
+
+#### Observations
+
+- All three methods produced the correct result.
+- The **Reduce method was the fastest**, followed closely by the manual Send/Recv implementation.
+- The **Gather method was noticeably slower**, as it requires an additional loop on the root process to sum the collected values.
+- `MPI_Reduce()` combines communication and computation into a single collective operation, making it both simpler and more efficient.
+- The manual Send/Recv approach requires more code and explicit communication handling.
+- `MPI_Gather()` simplifies communication but does not perform the reduction step automatically.
+
+#### Conclusion
+
+For this problem, `MPI_Reduce()` is the most efficient and concise approach. It avoids the need for explicit message handling or post-processing on the root process. While the differences in runtime are small for this test, the advantages of `MPI_Reduce()` are expected to become more significant for larger problems.
+
+### Step 3: Custom Reduce Operation
+
+A custom reduction operation was implemented using `MPI_Op_create()`. A user-defined function was written to perform summation of integer values, replicating the behaviour of `MPI_SUM`.
+
+The custom operation was then passed into `MPI_Reduce()` to compare its performance with the built-in reduction.
+
+#### Results
+
+| Method         | Input | Output Sum | Internal Runtime (s) |
+|----------------|------:|-----------:|---------------------:|
+| MPI_SUM (Reduce) | 10  | 55         | 0.000025             |
+| Custom Reduce    | 10  | 55         | 0.000040             |
+
+#### Observations
+
+- The custom reduction produced the correct result.
+- The runtime of the custom reduction was slightly slower than the built-in `MPI_SUM`.
+- This is expected, as the built-in MPI reduction operations are highly optimised.
+- The difference in runtime is small for this problem, but could become more significant for larger datasets.
+
+#### Conclusion
+
+The custom reduction demonstrates how user-defined operations can be implemented in MPI. While `MPI_SUM` is simpler and more efficient for standard operations, `MPI_Op_create()` provides flexibility for implementing more complex reductions when needed.
