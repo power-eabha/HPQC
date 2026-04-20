@@ -177,3 +177,36 @@ This experiment demonstrates two key properties of MPI communication:
 - **Bandwidth** dominates for larger messages, causing communication time to increase with message size.
 
 The results clearly show the transition from latency-dominated to bandwidth-dominated communication as message size increases.
+
+
+## Part 3: Collective Communications
+
+### Step 1: Broadcast vs Scatter vs DIY
+
+Three different approaches were tested for distributing vector data across MPI processes.
+
+- **DIY/manual approach**: based on the previous MPI vector code, where each process worked out its own portion of the problem itself.
+- **Broadcast approach**: the root process created the full vector and sent a copy of the whole array to every process using `MPI_Bcast()`.
+- **Scatter approach**: the root process created the full vector and distributed only the relevant chunk to each process using `MPI_Scatter()`.
+
+Each version was first tested with small input values of known output to confirm correctness.
+
+#### Results
+
+| Version   | Input | Expected Sum | Output Sum | Internal Runtime (s) |
+|----------|------:|-------------:|-----------:|---------------------:|
+| DIY      | 10    | 55           | 55         | 0.000044             |
+| Broadcast| 10    | 55           | 55         | 0.000041             |
+| Scatter  | 12    | 78           | 78         | 0.000053             |
+
+#### Observations
+
+- All three versions produced the correct result.
+- The broadcast version was slightly faster than the DIY version for this small test.
+- The scatter version was also correct, though it used a slightly different input (`12`) so that the vector could be divided evenly across 4 processes.
+- `MPI_Bcast()` sends the whole vector to every process, which is simple but may use more communication and memory overall.
+- `MPI_Scatter()` sends only the relevant chunk to each process, which is expected to be more efficient for larger problems.
+
+#### Conclusion
+
+For these small test cases, the differences in runtime were extremely small. However, the collective communication methods worked correctly and showed the expected differences in communication strategy. In particular, scattering only the required chunk of the array should scale better than broadcasting the full vector to every process.
