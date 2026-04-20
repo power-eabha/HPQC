@@ -1,0 +1,6 @@
+week5/venv/
+week5/data/
+week5/string_wave
+week5/string_wave_args
+*.csv
+__pycache__/
